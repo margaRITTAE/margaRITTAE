@@ -1,66 +1,101 @@
-// ============================================================================
-//  mechanism.js  —  YOUR CODE GOES HERE
-// ============================================================================
-//
-//  This file is the pedal's brain. The rest of the app (UI, knobs, X-ray view,
-//  oscilloscopes, guitar, file loading, stage on/off switches, footswitch)
-//  is already wired up and calls into the two functions below.
-//
-//  Right now every stage is a plain pass-through, so "After" looks exactly
-//  like "Before". Fill in the five TODO blocks to make it distort.
-//
-//  ---------------------------------------------------------------------------
-//  HOW THE APP USES THIS FILE
-//  ---------------------------------------------------------------------------
-//  1. When audio starts, the app calls  createPedalStages(ctx)  once.
-//     You return one object per stage:
-//
-//        { input: AudioNode, output: AudioNode, update(state) }
-//
-//     The app connects them in order:
-//        guitar → inputShaping → softClip → hardClip → tone → level → speakers
-//
-//     Stage on/off toggles and the footswitch are handled by the app
-//     (it routes around your stage). You never need to bypass anything.
-//
-//  2. Whenever a knob turns or a part value changes in the X-ray view,
-//     the app calls  stage.update(state)  on every stage.
-//
-//  3. describeStage(stageId, state) is optional. Return a short string and
-//     it shows under that stage in the X-ray view (e.g. "gain ×54").
-//
-//  ---------------------------------------------------------------------------
-//  WHAT'S IN `state`
-//  ---------------------------------------------------------------------------
-//  state.knobs        { drive, tone, level }   each 0..1
-//  state.components   fixed parts:  Cin: { value: 4.7, unit: 'nF', si: 4.7e-9 }
-//                     pots:         Rdrive: { min: 1, max: 150, unit: 'kΩ',
-//                                             siMin: 1000, siMax: 150000, knob: 'drive' }
-//                     diodes:       D2: { value: '1N4148', vf: 0.6 }
-//                     → use .si / .siMin / .siMax for math (farads, ohms).
-//                       Turning the knob into a resistance (linear, log taper...)
-//                       is up to you: e.g. siMin + knob * (siMax - siMin).
-//  state.sampleRate   44100 (CD quality, set in config.js). Audio runs as
-//                     32-bit float inside the browser, so expect -1..1 samples.
-//
-//  Part names match the schematic:
-//    Cin Rin | Cf1 Rdrive Rg Cg | Ci Ri Cf2 Rf Cc Rc D2 | Rtone Ct | Level
-//  Pots: Rdrive (drive knob), Rtone (tone knob), Level (level knob)
-//  Defaults live in config.js.
-//
-//  ---------------------------------------------------------------------------
-//  WEB AUDIO BUILDING BLOCKS YOU'LL PROBABLY WANT
-//  ---------------------------------------------------------------------------
-//  ctx.createGain()            → .gain.value
-//  ctx.createBiquadFilter()    → .type = 'highpass' | 'lowpass' | 'lowshelf'
-//                                 | 'peaking' | 'highshelf', .frequency, .Q, .gain
-//  ctx.createWaveShaper()      → .curve = Float32Array (maps input -1..1 to output)
-//                                 .oversample = '4x'  (less aliasing)
-//  new AudioWorkletNode(...)   → if you want to write sample-by-sample DSP
-//
-//  Chain nodes with  a.connect(b);  then return the first as `input`
-//  and the last as `output`.
-// ============================================================================
+/* Schematics 
+
+                                                         GND
+                                                          │
+    Signal ─── Cin───┬──────── + ┌──────┐                 └─ + ┌──────┐                                 ┌─────┐
+                     │           │OP Amp├─┐                    │OP Amp├─┬── Cc ── Rc ─┬─┬─── Rtone ─┬───│Level├─── Out
+                    Rin        - └──────┘ ├── Ci ── Ri ───── - └──────┘ │             ▼ _           │   └─────┘
+                     │         │          │                  │          │             ─ ▲          Ct
+                    GND        ├─── Cf1───┤                  ├─── Cf2───┤             └┬┘           │
+                     │         │          │                  │          │              │            │
+                    Cg ── Rg ──┴─ Rdrive ─┘                  └─── Rf ───┘             GND          GND
+                                                                  
+*/
+
+class Distortion {
+  static inputPeakVolts = 0.5 * 1.33;
+
+  static thermalVoltage = 0.025;
+  static saturationCurrent = 1.7e-9;
+  static idealityFactor = 1.2;
+
+  static RdriveMin = 1000.0;
+  static RdriveMax = 150000.0;
+  static RtoneMin = 5000.0;
+  static RtoneMax = 47000.0;
+  static levelMin = 0.0;
+  static levelMax = 1.0;
+
+  static clamp(x, lo, hi) {
+    if (x < lo) return lo;
+    if (x > hi) return hi;
+    return x;
+  }
+
+  constructor(sampleRate = 44100.0) {
+    this.Rin = 1.0e6;
+    this.Cin = 4.7e-9;
+    this.Cf1 = 100e-12;
+    this.Rg = 1000.0;
+    this.Cg = 220e-9;
+    this.Rdrive = Distortion.RdriveMin;
+    this.Ci = 100e-9;
+    this.Ri = 10000.0;
+    this.Cf2 = 100e-12;
+    this.Rf = 1e6;
+    this.Cc = 470e-9;
+    this.Rc = 47.0;
+    this.Rtone = Distortion.RtoneMax;
+    this.Ct = 10e-9;
+    this.level = 1.0;
+
+    this.dt = 1.0 / 44100.0;
+    this.enabled = false;
+
+    this.VclipPrev = 0.0;
+    this.VCin = 0.0;
+    this.VCi = 0.0;
+    this.VCf1 = 0.0;
+    this.VCf2 = 0.0;
+    this.VCg = 0.0;
+    this.VCc = 0.0;
+    this.VCt = 0.0;
+
+    this.setSampleRate(sampleRate);
+  }
+
+  setSampleRate(sampleRate) {
+    if (sampleRate > 0.0) {
+      this.dt = 1.0 / sampleRate;
+    }
+  }
+
+  setRin(ohms) { this.Rin = ohms > 0.0 ? ohms : 1.0e-12; }
+  setCin(farads) { this.Cin = farads > 0.0 ? farads : 1.0e-12; }
+  setCf1(farads) { this.Cf1 = farads > 0.0 ? farads : 1.0e-12; }
+  setRg(ohms) { this.Rg = ohms > 0.0 ? ohms : 1.0e-12; }
+  setCg(farads) { this.Cg = farads > 0.0 ? farads : 1.0e-12; }
+  setDrive(ohms) {
+    this.Rdrive = Distortion.clamp(ohms, Distortion.RdriveMin, Distortion.RdriveMax);
+  }
+  setCi(farads) { this.Ci = farads > 0.0 ? farads : 1.0e-12; }
+  setRi(ohms) { this.Ri = ohms > 0.0 ? ohms : 1.0e-12; }
+  setCf2(farads) { this.Cf2 = farads > 0.0 ? farads : 1.0e-12; }
+  setRf(ohms) { this.Rf = ohms > 0.0 ? ohms : 1.0e-12; }
+  setCc(farads) { this.Cc = farads > 0.0 ? farads : 1.0e-12; }
+  setRc(ohms) { this.Rc = ohms > 0.0 ? ohms : 1.0e-12; }
+  setTone(ohms) {
+    this.Rtone = Distortion.clamp(ohms, Distortion.RtoneMin, Distortion.RtoneMax);
+  }
+  setCt(farads) { this.Ct = farads > 0.0 ? farads : 1.0e-12; }
+  setLevel(gain) {
+    this.level = Distortion.clamp(gain, Distortion.levelMin, Distortion.levelMax);
+  }
+
+  enable() { this.enabled = true; }
+  disable() { this.enabled = false; }
+  isEnabled() { return this.enabled; }
+}
 
 
 export function createPedalStages(ctx) {
