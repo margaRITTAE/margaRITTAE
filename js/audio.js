@@ -28,7 +28,7 @@ function build(state) {
 
   inputBus = ctx.createGain();
   analyserBefore = ctx.createAnalyser();
-  analyserBefore.fftSize = 2048;
+  analyserBefore.fftSize = 4096;
   inputBus.connect(analyserBefore);
 
   let made = {};
@@ -56,7 +56,7 @@ function build(state) {
   inputBus.connect(pedalDry); pedalDry.connect(out);
 
   analyserAfter = ctx.createAnalyser();
-  analyserAfter.fftSize = 2048;
+  analyserAfter.fftSize = 4096;
   out.connect(analyserAfter);
 
   // Safety limiter so a wild setting can't blast anyone's ears.
@@ -114,10 +114,21 @@ export function stopLoop() {
 }
 
 // ---------- plucked string (Karplus–Strong) for the V-Inst and placeholders ----------
+// The string starts in the shape a finger leaves it: a triangle peaking where
+// it was plucked (~1/5 along), plus a little noise for realism. A pure noise
+// burst sounds brighter but draws as a jagged mess on the oscilloscope.
+const PLUCK_POS = 0.2, PLUCK_NOISE = 0.08;
 function ks(out, start, freq, seconds, amp) {
   const sr = ctx.sampleRate, N = Math.max(2, Math.round(sr / freq)), b = new Float32Array(N);
-  let p = 0;
-  for (let i = 0; i < N; i++) { p = 0.5 * p + 0.5 * (Math.random() * 2 - 1); b[i] = p; }
+  const peak = Math.max(1, Math.round(N * PLUCK_POS));
+  let p = 0, mean = 0;
+  for (let i = 0; i < N; i++) {
+    const tri = i < peak ? i / peak : (N - i) / (N - peak);
+    p = 0.7 * p + 0.3 * (Math.random() * 2 - 1);          // softened noise
+    b[i] = tri + PLUCK_NOISE * p; mean += b[i];
+  }
+  mean /= N;
+  for (let i = 0; i < N; i++) b[i] -= mean;               // no DC offset
   const len = Math.min(out.length - start, Math.round(seconds * sr));
   for (let i = 0, k = 0; i < len; i++) {
     const v = b[k]; b[k] = 0.996 * 0.5 * (v + b[(k + 1) % N]);
