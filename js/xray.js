@@ -37,7 +37,7 @@ const part = (id, x, y, anchor = 'middle') =>
 // ---------- the schematic, split into the five stages ----------
 // Coordinates follow the hand-drawn sketch: IN → Cin/Rin → op-amp 1 → Ci/Ri →
 // op-amp 2 → Cc/Rc/diodes → Rtone/Ct → Level → OUT
-const REGIONS = { inputShaping: [8, 186], softClip: [186, 374], hardClip: [374, 852], tone: [852, 962], level: [962, 1102] };
+const REGIONS = { inputShaping: [8, 186], preGain: [186, 374], hardClip: [374, 852], tone: [852, 962], level: [962, 1102] };
 
 const DRAW = {
   inputShaping:
@@ -45,7 +45,7 @@ const DRAW = {
     + dot(130, 90) + wire([130, 90], [130, 118]) + resV(130, 118, 168) + wire([130, 168], [130, 186]) + gnd(130, 186)
     + part('Cin', 80, 64) + part('Rin', 146, 140, 'start'),
 
-  softClip:
+  preGain:
     wire([186, 90], [260, 90]) + opamp(260, 110, 'U1') + wire([330, 110], [374, 110]) + dot(350, 110)
     // feedback loop: Cf1 ‖ Rdrive
     + wire([240, 130], [260, 130]) + wire([240, 130], [240, 215]) + wire([350, 110], [350, 215])

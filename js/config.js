@@ -22,7 +22,7 @@ export const KNOBS = [
 // returned by createPedalStages() in mechanism.js.
 export const STAGES = [
   { id: 'inputShaping', name: 'Input shaping' },
-  { id: 'softClip',     name: 'Soft clipping' },
+  { id: 'preGain',      name: 'Pre-gain' },
   { id: 'hardClip',     name: 'Hard clipping' },
   { id: 'tone',         name: 'Tone' },
   { id: 'level',        name: 'Level' },
@@ -43,11 +43,11 @@ export const COMPONENTS = {
   // Stage 1: input shaping
   Cin:    { value: 4.7,  unit: 'nF', stage: 'inputShaping', desc: 'Input coupling capacitor' },
   Rin:    { value: 1,    unit: 'MΩ', stage: 'inputShaping', desc: 'Input resistor to ground' },
-  // Stage 2: soft clipping (op-amp 1 with Rdrive ‖ Cf1 feedback, Rg + Cg to ground)
-  Cf1:    { value: 100,  unit: 'pF', stage: 'softClip', desc: 'Feedback capacitor' },
-  Rdrive: { min: 1, max: 150, unit: 'kΩ', stage: 'softClip', desc: 'Drive pot in the feedback loop', knob: 'drive' },
-  Rg:     { value: 1,    unit: 'kΩ', stage: 'softClip', desc: 'Gain-setting resistor to ground' },
-  Cg:     { value: 220,  unit: 'nF', stage: 'softClip', desc: 'Capacitor in series with Rg' },
+  // Stage 2: pre-gain (op-amp 1 with Rdrive ‖ Cf1 feedback, Rg + Cg to ground)
+  Cf1:    { value: 100,  unit: 'pF', stage: 'preGain', desc: 'Feedback capacitor' },
+  Rdrive: { min: 1, max: 150, unit: 'kΩ', stage: 'preGain', desc: 'Drive pot in the feedback loop', knob: 'drive' },
+  Rg:     { value: 1,    unit: 'kΩ', stage: 'preGain', desc: 'Gain-setting resistor to ground' },
+  Cg:     { value: 220,  unit: 'nF', stage: 'preGain', desc: 'Capacitor in series with Rg' },
   // Stage 3: hard clipping (op-amp 2 inverting stage, then diodes to ground)
   Ci:     { value: 100,  unit: 'nF', stage: 'hardClip', desc: 'Coupling capacitor into op-amp 2' },
   Ri:     { value: 10,   unit: 'kΩ', stage: 'hardClip', desc: 'Input resistor of op-amp 2' },

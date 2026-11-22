@@ -14,7 +14,7 @@ export const isReady = () => !!ctx;
 export const analysers = () => ({ before: analyserBefore, after: analyserAfter });
 
 export async function ensureAudio(state) {
-  if (!ctx) build(state);
+  if (!ctx) await build(state);
   if (ctx.state === 'suspended') await ctx.resume();
   return ctx;
 }
@@ -24,7 +24,7 @@ function passThrough() {
   return { input: g, output: g, update() {} };
 }
 
-function build(state) {
+async function build(state) {
   ctx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: SAMPLE_RATE });
 
   inputBus = ctx.createGain();
@@ -33,7 +33,7 @@ function build(state) {
   inputBus.connect(analyserBefore);
 
   let made = {};
-  try { made = createPedalStages(ctx) || {}; }
+  try { made = await createPedalStages(ctx) || {}; }
   catch (e) { console.error('createPedalStages() threw. Using pass-through stages.', e); }
 
   // Each stage: prev → stage → wet ─┐
