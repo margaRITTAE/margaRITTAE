@@ -1,19 +1,18 @@
 // scope.js — the Before / After oscilloscopes in the Output column.
 //
-// Three things keep the picture readable:
-//   1. Auto-zoom: each scope scales its wave to fill the box, so a quiet
-//      guitar still shows its shape. The zoom eases in, so it doesn't jump.
-//   2. Steady trigger: the wave always starts at the same rising edge
+// The scale is fixed (no zooming in), so Before and After can be compared
+// for loudness too. Two things keep the picture readable:
+//   1. Steady trigger: the wave always starts at the same rising edge
 //      (with hysteresis, so noise near zero can't make it hop around).
-//   3. Smoothing: each frame is blended with the last one, which calms
+//   2. Smoothing: each frame is blended with the last one, which calms
 //      the jitter without hiding real changes in shape.
+// If a wave is too loud for the box, it is shrunk to fit instead of cut off.
 // When the sound stops, the last wave stays on screen (faded) to study.
 
-const SPAN = 768;               // samples shown: ~16 ms at 48 kHz
+const SPAN = 768;               // samples shown: ~17 ms at 44.1 kHz
 const BLEND = 0.35;             // how much of each new frame to mix in (lower = calmer)
-const FILL = 0.7;               // wave peaks reach 70% of the box's half-height (room to spare)
-const ZOOM_IN_EASE = 0.04;      // zooming in on a fading note: slow and gentle
-const MAX_ZOOM = 6;             // cap, so a fading note's quiet tail doesn't turn into fuzz
+const SCALE = 1.25;             // fixed scale for −14 LUFS input: typical loud notes (~0.57) fill ~70% of the box
+const FIT = 0.95;               // if a wave would go past 95% of the box, shrink it to fit
 
 const states = new WeakMap();   // per-canvas memory: { disp, zoom }
 let raw = null;
@@ -79,17 +78,12 @@ export function drawScope(canvas, analyser, colors, label) {
     if (!st.disp) st.disp = raw.slice(start, start + SPAN);
     else for (let i = 0; i < SPAN; i++) st.disp[i] += (raw[start + i] - st.disp[i]) * BLEND;
 
-    // Zoom to fit what's on screen. Check both the smoothed trace and the
-    // newest raw frame, so a fresh, louder pluck is measured right away.
+    // Fixed scale, but never let a loud wave run off the box.
     let shown = 0;
     for (let i = 0; i < SPAN; i++) shown = Math.max(shown, Math.abs(st.disp[i]), Math.abs(raw[start + i]));
-    const target = Math.min(MAX_ZOOM, FILL / Math.max(shown, 1e-4));
-    // Zoom OUT instantly (never cut off a peak), zoom IN slowly (no jumping).
-    st.zoom = target < st.zoom ? target : st.zoom + (target - st.zoom) * ZOOM_IN_EASE;
+    st.zoom = Math.min(SCALE, FIT / Math.max(shown, 1e-4));
 
     trace(c, w, h, st.disp, st.zoom, colors.ink, 1);
-    c.fillStyle = colors.muted; c.font = `15px ${colors.font}`; c.textAlign = 'right';
-    c.fillText(`zoom ×${st.zoom.toFixed(1)}`, w - 8, 18);
     return;
   }
 

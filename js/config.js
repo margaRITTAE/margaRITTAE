@@ -64,3 +64,14 @@ export const COMPONENTS = {
 };
 
 export const UNIT_SCALE = { pF: 1e-12, nF: 1e-9, 'µF': 1e-6, 'Ω': 1, 'kΩ': 1e3, 'MΩ': 1e6 };
+
+// The whole audio engine runs at this rate. Match your recordings to it
+// (44.1 kHz, 16-bit WAV = CD quality) so nothing is resampled on the way in.
+export const SAMPLE_RATE = 44100;
+
+// Loudness of every synthesized sound (V-Inst plucks, stand-in strums), set to
+// match the recordings in /audio (solo.wav is −13.8 LUFS). Each note is measured
+// and scaled on its own, so high and low strings feel equally loud.
+// SYNTH_CEILING keeps peaks at or below −1 dB (0.89), the same as the recordings.
+export const SYNTH_LUFS = -14;
+export const SYNTH_CEILING = 0.89;

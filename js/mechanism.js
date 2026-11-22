@@ -40,7 +40,8 @@
 //                     → use .si / .siMin / .siMax for math (farads, ohms).
 //                       Turning the knob into a resistance (linear, log taper...)
 //                       is up to you: e.g. siMin + knob * (siMax - siMin).
-//  state.sampleRate   e.g. 48000
+//  state.sampleRate   44100 (CD quality, set in config.js). Audio runs as
+//                     32-bit float inside the browser, so expect -1..1 samples.
 //
 //  Part names match the schematic:
 //    Cin Rin | Cf1 Rdrive Rg Cg | Ci Ri Cf2 Rf Cc Rc D2 | Rtone Ct | Level

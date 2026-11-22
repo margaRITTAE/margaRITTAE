@@ -1,7 +1,8 @@
 // audio.js — audio graph, routing around stages, clip loading, plucks.
 // You shouldn't need to edit this; the pedal itself lives in mechanism.js.
 import { createPedalStages } from './mechanism.js';
-import { STAGES } from './config.js';
+import { STAGES, SAMPLE_RATE, SYNTH_LUFS, SYNTH_CEILING } from './config.js';
+import { normalizeLoudness } from './loudness.js';
 
 let ctx = null;
 let inputBus, analyserBefore, analyserAfter, pedalWet, pedalDry;
@@ -24,7 +25,7 @@ function passThrough() {
 }
 
 function build(state) {
-  ctx = new (window.AudioContext || window.webkitAudioContext)();
+  ctx = new (window.AudioContext || window.webkitAudioContext)({ sampleRate: SAMPLE_RATE });
 
   inputBus = ctx.createGain();
   analyserBefore = ctx.createAnalyser();
@@ -70,7 +71,7 @@ function build(state) {
 
 const ramp = (param, v) => param.setTargetAtTime(v, ctx.currentTime, 0.015);
 
-export const sampleRate = () => (ctx ? ctx.sampleRate : 48000);
+export const sampleRate = () => (ctx ? ctx.sampleRate : SAMPLE_RATE);
 
 export function applyState(state) {
   if (!ctx) return;
@@ -135,12 +136,14 @@ function ks(out, start, freq, seconds, amp) {
     out[start + i] += v * amp; k = (k + 1) % N;
   }
 }
-function normalize(d, peak) { let m = 0; for (const v of d) m = Math.max(m, Math.abs(v)); if (m) for (let i = 0; i < d.length; i++) d[i] *= peak / m; }
+// Every synthesized sound is set to the same loudness as the recordings
+// (SYNTH_LUFS / SYNTH_CEILING in config.js), so the pedal treats them equally.
+const level = d => normalizeLoudness(d, ctx.sampleRate, SYNTH_LUFS, SYNTH_CEILING);
 
 export function pluck(freq) {
   const buf = ctx.createBuffer(1, Math.round(ctx.sampleRate * 2), ctx.sampleRate);
   const d = buf.getChannelData(0);
-  ks(d, 0, freq, 2, 1); normalize(d, 0.45);
+  ks(d, 0, freq, 2, 1); level(d);
   const s = ctx.createBufferSource(); s.buffer = buf; s.connect(inputBus); s.start();
 }
 
@@ -152,6 +155,6 @@ function placeholderStrum(name) {
   if (/solo/i.test(name)) [329.63, 392, 440, 493.88, 587.33, 493.88, 440, 392].forEach((f, i) => ks(d, Math.round(i * 0.5 * sr), f, 0.6, 0.5));
   else if (/wonder/i.test(name)) { strum(0, E); strum(1, G); strum(2, E); strum(3, G); }
   else { strum(0, E); strum(2, E); }
-  normalize(d, 0.45);
+  level(d);
   return buf;
 }
