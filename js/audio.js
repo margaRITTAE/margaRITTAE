@@ -61,7 +61,7 @@ async function build(state) {
   out.connect(analyserAfter);
 
   // Safety limiter so a wild setting can't blast anyone's ears.
-  const master = ctx.createGain(); master.gain.value = 0.6;
+  const master = ctx.createGain(); master.gain.value = 0.15;
   const limiter = ctx.createDynamicsCompressor();
   limiter.threshold.value = -6; limiter.ratio.value = 20; limiter.attack.value = 0.002;
   out.connect(master); master.connect(limiter); limiter.connect(ctx.destination);
