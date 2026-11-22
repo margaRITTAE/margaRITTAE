@@ -71,7 +71,7 @@ function inputShaping(ctx) {
 
 // ---------------------------------------------------------------------------
 // STAGE 2 — Pre-gain             parts: Cf1, Rdrive (Drive knob), Rg, Cg
-// Op-amp 1 gain + rail limit (solveGainStage1)
+// Op-amp 1 feedback loop and rail limit simulation
 // ---------------------------------------------------------------------------
 function preGain(ctx) {
   const node = new AudioWorkletNode(ctx, 'pre-gain', {
@@ -100,15 +100,30 @@ function preGain(ctx) {
 
 // ---------------------------------------------------------------------------
 // STAGE 3 — Hard clipping        parts: Ci, Ri, Cf2, Rf, Cc, Rc, D2
+// Starts at Ci: coupling + op-amp 2 + diode clip (solveGainStage2 + solveClipStage)
 // ---------------------------------------------------------------------------
 function hardClip(ctx) {
-  const node = ctx.createGain();          // TODO: AudioWorkletNode
+  const node = new AudioWorkletNode(ctx, 'hard-clip', {
+    numberOfInputs: 1,
+    numberOfOutputs: 1,
+    outputChannelCount: [1],
+    channelCount: 1,
+    channelCountMode: 'explicit',
+  });
 
   return {
     input: node,
     output: node,
     update(state) {
-      // TODO
+      const c = state.components;
+      node.port.postMessage({
+        Ci: c.Ci.si,
+        Ri: c.Ri.si,
+        Cf2: c.Cf2.si,
+        Rf: c.Rf.si,
+        Cc: c.Cc.si,
+        Rc: c.Rc.si,
+      });
     },
   };
 }
@@ -156,9 +171,10 @@ export function describeStage(stageId, state) {
       return `Simple highpass filter to tame harsh frequencies`;
     }
     case 'preGain': {
-      return `Op-amp gain (drive) before the diode clipper`;
+      return `Op-amp gain (drive) and rail saturation before the clipping stage`;
     }
-    case 'hardClip': return '';
+    case 'hardClip':
+      return `More gain, then diodes cut off the top and bottom of the signal`;
     case 'tone':     return '';
     case 'level':    return '';
     default:         return '';
