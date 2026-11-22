@@ -1,0 +1,72 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <title>Distortion Pedal, Opened Up</title>
+  <meta name="description" content="Play clean guitar through a five-stage distortion pedal, open it up in X-ray view, and watch the wave change.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Caveat:wght@600;700&family=Patrick+Hand&display=swap">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <main class="app">
+    <header class="top">
+      <h1>What does a distortion pedal <span class="hl">do</span> to your guitar?</h1>
+      <p>Clean guitar goes in. Five little circuits bend it. Fuzz comes out. Turn the knobs, or X-ray the pedal and swap the parts.</p>
+    </header>
+
+    <!-- ============ INPUT ============ -->
+    <section class="col col-input" aria-labelledby="h-in">
+      <h2 id="h-in">Input</h2>
+      <div class="clips" id="clips"></div>
+      <button id="play" class="sketch play"><span class="tri" aria-hidden="true"></span><span id="playTxt">Play</span></button>
+      <p class="hint" id="clipNote"></p>
+
+      <div class="scribble-rule" aria-hidden="true"></div>
+
+      <h2>V-Inst</h2>
+      <div class="vinst">
+        <canvas id="neck" aria-label="Guitar neck. Click a fret on a string to pluck it."></canvas>
+        <span class="side-label">click a fret to play</span>
+      </div>
+    </section>
+
+    <!-- ============ MECHANISM ============ -->
+    <section class="col col-mech" aria-labelledby="h-mech">
+      <h2 id="h-mech">Mechanism</h2>
+
+      <div class="outside">
+        <svg class="cable" viewBox="0 0 120 40" preserveAspectRatio="none" aria-hidden="true"><path d="M0 22 C10 22 14 10 24 14 S38 30 48 24 S66 12 78 20 S100 24 120 20"/></svg>
+        <div class="pedal sketch">
+          <div id="knobs"></div>
+          <button id="foot" class="foot" aria-label="Footswitch: pedal on or off" aria-pressed="true"></button>
+        </div>
+        <svg class="cable" viewBox="0 0 120 40" preserveAspectRatio="none" aria-hidden="true"><path d="M0 20 C18 18 30 30 46 24 S70 10 84 16 S106 22 120 14"/></svg>
+      </div>
+
+      <div class="xray sketch">
+        <h3>X-Ray view</h3>
+        <div class="toggles" id="toggles" aria-label="Turn each stage on or off"></div>
+        <div class="xray-shell">
+          <div class="xray-film" id="schematic"></div>
+        </div>
+        <p class="hint">Click any part to change its value.</p>
+        <div class="popover sketch" id="popover" hidden></div>
+      </div>
+    </section>
+
+    <!-- ============ OUTPUT ============ -->
+    <section class="col col-out" aria-labelledby="h-out">
+      <h2 id="h-out">Output</h2>
+      <h3>Before</h3>
+      <div class="scope sketch"><canvas id="scBefore" aria-label="Oscilloscope of the clean signal"></canvas></div>
+      <h3>After</h3>
+      <div class="scope sketch"><canvas id="scAfter" aria-label="Oscilloscope of the signal after the pedal"></canvas></div>
+    </section>
+  </main>
+
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>
