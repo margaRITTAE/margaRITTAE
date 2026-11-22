@@ -76,7 +76,7 @@ $('knobs').innerHTML = rows.map((row, r) => `<div class="krow">${row.map(k => `
     <span>${k.label}</span>
   </div>`).join(r === 0 ? '<span class="led" id="led"></span>' : '')}</div>`).join('');
 
-document.querySelectorAll('.knob').forEach(el => {
+document.querySelectorAll('#knobs .knob').forEach(el => {
   const id = el.dataset.k; let y0 = 0, v0 = 0, drag = false;
   el.addEventListener('pointerdown', e => { drag = true; y0 = e.clientY; v0 = state.knobs[id]; el.setPointerCapture(e.pointerId); el.focus(); });
   el.addEventListener('pointermove', e => { if (!drag) return; state.knobs[id] = Math.min(1, Math.max(0, v0 + (y0 - e.clientY) / 150)); changed(); });
@@ -89,6 +89,29 @@ document.querySelectorAll('.knob').forEach(el => {
 });
 $('foot').addEventListener('click', () => { state.pedalOn = !state.pedalOn; changed(); });
 
+// ---------- output: master Volume knob (speakers only, not part of the pedal) ----------
+// Knob 0..1 → gain 0..0.6 on a squared curve, so it feels even to the ear.
+// Starts at 0.5 → 0.15, the current default.
+{
+  const el = $('volume');
+  let v = 0.5, y0 = 0, v0 = 0, drag = false;
+  const set = nv => {
+    v = Math.min(1, Math.max(0, nv));
+    el.querySelector('i').style.transform = `rotate(${-135 + 270 * v}deg)`;
+    el.setAttribute('aria-valuenow', (v * 10).toFixed(1));
+    audio.setVolume(0.6 * v * v);
+  };
+  el.addEventListener('pointerdown', e => { drag = true; y0 = e.clientY; v0 = v; el.setPointerCapture(e.pointerId); el.focus(); });
+  el.addEventListener('pointermove', e => { if (drag) set(v0 + (y0 - e.clientY) / 150); });
+  el.addEventListener('pointerup', () => drag = false);
+  el.addEventListener('pointercancel', () => drag = false);
+  el.addEventListener('keydown', e => {
+    const d = { ArrowUp: .05, ArrowRight: .05, ArrowDown: -.05, ArrowLeft: -.05 }[e.key];
+    if (d) { e.preventDefault(); set(v + d); }
+  });
+  set(v);
+}
+
 // ---------- mechanism: x-ray view ----------
 const refreshXray = mountXray({
   svgHost: $('schematic'), togglesHost: $('toggles'), readoutHost: null, popover: $('popover'),
@@ -97,7 +120,7 @@ const refreshXray = mountXray({
 
 // ---------- one place that reacts to every change ----------
 function changed() {
-  document.querySelectorAll('.knob').forEach(el => {
+  document.querySelectorAll('#knobs .knob').forEach(el => {
     const v = state.knobs[el.dataset.k];
     el.querySelector('i').style.transform = `rotate(${-135 + 270 * v}deg)`;
     el.setAttribute('aria-valuenow', (v * 10).toFixed(1));

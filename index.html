@@ -28,7 +28,7 @@
 
       <h2>V-Inst</h2>
       <div class="vinst">
-        <canvas id="neck" aria-label="Guitar neck. Click a fret on a string to pluck it."></canvas>
+        <div class="neck-box"><canvas id="neck" aria-label="Guitar neck. Click a fret on a string to pluck it."></canvas></div>
         <span class="side-label">click a fret to play</span>
       </div>
     </section>
@@ -59,7 +59,13 @@
 
     <!-- ============ OUTPUT ============ -->
     <section class="col col-out" aria-labelledby="h-out">
-      <h2 id="h-out">Output</h2>
+      <div class="out-head">
+        <h2 id="h-out">Output</h2>
+        <div class="kwrap vol">
+          <div class="knob small" id="volume" tabindex="0" role="slider" aria-label="Master volume" aria-valuemin="0" aria-valuemax="10"><i></i></div>
+          <span>Volume</span>
+        </div>
+      </div>
       <h3>Before</h3>
       <div class="scope sketch"><canvas id="scBefore" aria-label="Oscilloscope of the clean signal"></canvas></div>
       <h3>After</h3>

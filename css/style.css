@@ -61,9 +61,11 @@ button:focus-visible,.knob:focus-visible,.part:focus-visible,input:focus-visible
 .play .tri{width:0;height:0;border-left:12px solid currentColor;border-top:8px solid transparent;border-bottom:8px solid transparent}
 .play.on .tri{width:12px;height:15px;border:none;border-left:4px solid currentColor;border-right:4px solid currentColor}
 .scribble-rule{height:3px;background:var(--ink);border-radius:3px;transform:rotate(-.6deg);margin:4px -6px}
-.vinst{flex:1;min-height:200px;display:grid;grid-template-columns:minmax(0,1fr) 26px;gap:4px}
-#neck{width:100%;height:100%;display:block;cursor:pointer;touch-action:manipulation}
-.side-label{writing-mode:vertical-rl;transform:rotate(180deg);font-size:20px;color:var(--muted);text-align:center}
+.vinst{flex:1;min-height:200px;display:grid;grid-template-columns:minmax(0,1fr) 26px;grid-template-rows:minmax(0,1fr);gap:4px}
+/* the canvas fills its box but never sets the box's size (that caused an endless grow loop) */
+.neck-box{position:relative;min-height:0}
+#neck{position:absolute;inset:0;width:100%;height:100%;display:block;cursor:pointer;touch-action:manipulation}
+.side-label{writing-mode:vertical-rl;transform:rotate(180deg);font-size:20px;color:var(--muted);text-align:center;min-height:0;max-height:100%;overflow:hidden;white-space:nowrap;align-self:center}
 
 /* ---------- mechanism: outside ---------- */
 .outside{display:flex;align-items:center;justify-content:center;gap:0}
@@ -119,6 +121,8 @@ button:focus-visible,.knob:focus-visible,.part:focus-visible,input:focus-visible
 .scope{flex:1;min-height:120px;padding:6px}
 .scope canvas{width:100%;height:100%;display:block}
 .col-out h3{margin-top:6px}
+.out-head{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.vol{flex-direction:row;gap:8px}
 
 /* ---------- small screens: stack and scroll ---------- */
 @media (max-width:1050px){

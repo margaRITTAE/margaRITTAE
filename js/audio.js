@@ -61,7 +61,7 @@ async function build(state) {
   out.connect(analyserAfter);
 
   // Safety limiter so a wild setting can't blast anyone's ears.
-  const master = ctx.createGain(); master.gain.value = 0.15;
+  master = ctx.createGain(); master.gain.value = masterVolume;
   const limiter = ctx.createDynamicsCompressor();
   limiter.threshold.value = -6; limiter.ratio.value = 20; limiter.attack.value = 0.002;
   out.connect(master); master.connect(limiter); limiter.connect(ctx.destination);
@@ -72,6 +72,14 @@ async function build(state) {
 const ramp = (param, v) => param.setTargetAtTime(v, ctx.currentTime, 0.015);
 
 export const sampleRate = () => (ctx ? ctx.sampleRate : SAMPLE_RATE);
+
+// Master volume (the Volume knob in the Output column). Speakers only:
+// it comes after the scopes, so it never changes what the pedal or scopes see.
+let master = null, masterVolume = 0.15;
+export function setVolume(gain) {
+  masterVolume = gain;
+  if (master) ramp(master.gain, gain);
+}
 
 export function applyState(state) {
   if (!ctx) return;
@@ -99,19 +107,46 @@ export async function loadClip(clip) {
     buf = placeholderStrum(clip.name);
     placeholder = true;
   }
+  fadeEdges(buf, LOOP_FADE);
   const entry = { buf, placeholder };
   decoded.set(clip.file, entry);
   return entry;
 }
 
+// ---------- no clicks ----------
+// A clip rarely starts and ends at exactly zero, so jumping from its last sample
+// back to its first (or cutting it off on Stop) makes a "tick". Short fades fix it.
+const LOOP_FADE = 0.012;   // seconds of fade at the start and end of every clip
+const STOP_FADE = 0.04;    // seconds to fade out when Play is stopped or the clip changes
+
+function fadeEdges(buf, seconds) {
+  const n = Math.min(Math.round(seconds * buf.sampleRate), Math.floor(buf.length / 2));
+  for (let ch = 0; ch < buf.numberOfChannels; ch++) {
+    const d = buf.getChannelData(ch);
+    for (let i = 0; i < n; i++) {
+      const g = 0.5 - 0.5 * Math.cos(Math.PI * i / n);   // smooth 0 → 1
+      d[i] *= g; d[d.length - 1 - i] *= g;
+    }
+  }
+}
+
+let clipGain = null;
 export function playLoop(buf) {
   stopLoop();
   clipSource = ctx.createBufferSource();
   clipSource.buffer = buf; clipSource.loop = true;
-  clipSource.connect(inputBus); clipSource.start();
+  clipGain = ctx.createGain();
+  clipSource.connect(clipGain); clipGain.connect(inputBus);
+  clipSource.start();
 }
 export function stopLoop() {
-  if (clipSource) { try { clipSource.stop(); } catch {} clipSource.disconnect(); clipSource = null; }
+  if (!clipSource) return;
+  const s = clipSource, g = clipGain, t = ctx.currentTime;
+  g.gain.setValueAtTime(g.gain.value, t);
+  g.gain.linearRampToValueAtTime(0, t + STOP_FADE);
+  try { s.stop(t + STOP_FADE + 0.01); } catch {}
+  s.onended = () => { s.disconnect(); g.disconnect(); };
+  clipSource = null; clipGain = null;
 }
 
 // ---------- plucked string (Karplus–Strong) for the V-Inst and placeholders ----------
@@ -144,6 +179,7 @@ export function pluck(freq) {
   const buf = ctx.createBuffer(1, Math.round(ctx.sampleRate * 2), ctx.sampleRate);
   const d = buf.getChannelData(0);
   ks(d, 0, freq, 2, 1); level(d);
+  fadeEdges(buf, 0.003);                     // no click at the very start or end of a pluck
   const s = ctx.createBufferSource(); s.buffer = buf; s.connect(inputBus); s.start();
 }
 
