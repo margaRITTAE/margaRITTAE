@@ -4,7 +4,7 @@ An interactive website that shows what a guitar distortion pedal does to a clean
 
 | Input | Mechanism | Output |
 |---|---|---|
-| Clean guitar recordings (`/audio`) or the V-Inst guitar neck (click a fret) | A 5-stage pedal: input shaping → soft clipping → hard clipping → tone → level. **Outside view:** knobs (drive, level, bass, mid, treble) and a footswitch. **X-ray view:** a schematic where every part (resistors, capacitors, diodes) can be edited. Each stage can be switched on or off. | The sound, plus before/after oscilloscopes |
+| Clean guitar recordings (`/audio`) or the V-Inst guitar neck (click a fret) | A 5-stage pedal: input shaping → soft clipping → hard clipping → tone → level. **Outside view:** knobs (drive, tone, level) and a footswitch. **X-ray view:** a schematic where every part (resistors, capacitors, diodes) can be edited. Each stage can be switched on or off. | The sound, plus before/after oscilloscopes |
 
 No build step and no dependencies: plain HTML, CSS and JavaScript modules.
 

@@ -11,7 +11,8 @@ const $ = id => document.getElementById(id);
 // ---------- app state ----------
 const state = {
   knobs: Object.fromEntries(KNOBS.map(k => [k.id, k.value])),
-  parts: Object.fromEntries(Object.entries(COMPONENTS).map(([id, c]) => [id, c.value])),
+  // pots store { min, max }; everything else stores its value
+  parts: Object.fromEntries(Object.entries(COMPONENTS).map(([id, c]) => [id, c.knob ? { min: c.min, max: c.max } : c.value])),
   stageOn: STAGES.map(() => true),
   pedalOn: true,
   clip: 0,
@@ -23,9 +24,10 @@ function mechanismState() {
   const components = {};
   for (const [id, c] of Object.entries(COMPONENTS)) {
     const v = state.parts[id];
-    components[id] = c.type === 'diode'
-      ? { value: v, vf: DIODES[v].vf }
-      : { value: v, unit: c.unit, si: v * UNIT_SCALE[c.unit] };
+    const k = UNIT_SCALE[c.unit];
+    components[id] = c.type === 'diode' ? { value: v, vf: DIODES[v].vf }
+      : c.knob ? { min: v.min, max: v.max, unit: c.unit, siMin: v.min * k, siMax: v.max * k, knob: c.knob }
+      : { value: v, unit: c.unit, si: v * k };
   }
   return {
     knobs: { ...state.knobs }, components, stageOn: [...state.stageOn], pedalOn: state.pedalOn,

@@ -13,11 +13,9 @@ export const CLIPS = [
 // Knobs on the outside of the pedal. Values are 0..1.
 // "size" only changes how big the knob is drawn.
 export const KNOBS = [
-  { id: 'drive',  label: 'Drive',  size: 'big',   value: 0.5 },
-  { id: 'level',  label: 'Level',  size: 'big',   value: 0.5 },
-  { id: 'bass',   label: 'Bass',   size: 'small', value: 0.5 },
-  { id: 'mid',    label: 'Mid',    size: 'small', value: 0.5 },
-  { id: 'treble', label: 'Treble', size: 'small', value: 0.5 },
+  { id: 'drive', label: 'Drive', size: 'big',   value: 0.5 },
+  { id: 'level', label: 'Level', size: 'big',   value: 0.5 },
+  { id: 'tone',  label: 'Tone',  size: 'small', value: 0.5 },
 ];
 
 // The five stages, in signal order. The ids must match the keys
@@ -40,30 +38,29 @@ export const DIODES = {
 // Every part shown in the X-ray schematic. These are starting values;
 // visitors can edit them by clicking the part.
 // unit: one of pF nF µF Ω kΩ MΩ (converted to SI for you in state.components[id].si)
-// knob: if set, this part is a pot that the named outside knob turns.
+// Pots have min/max instead of value, plus the outside knob that turns them.
 export const COMPONENTS = {
   // Stage 1: input shaping
-  Cin:    { value: 100,  unit: 'nF', stage: 'inputShaping', desc: 'Input coupling capacitor' },
+  Cin:    { value: 4.7,  unit: 'nF', stage: 'inputShaping', desc: 'Input coupling capacitor' },
   Rin:    { value: 1,    unit: 'MΩ', stage: 'inputShaping', desc: 'Input resistor to ground' },
-  // Stage 2: soft clipping (op-amp with diodes in the feedback loop)
-  Rg:     { value: 4.7,  unit: 'kΩ', stage: 'softClip', desc: 'Gain-setting resistor to ground' },
-  Cg:     { value: 47,   unit: 'nF', stage: 'softClip', desc: 'Capacitor in series with Rg' },
-  Rdrive: { value: 500,  unit: 'kΩ', stage: 'softClip', desc: 'Drive pot in the feedback loop', knob: 'drive' },
-  Cf1:    { value: 51,   unit: 'pF', stage: 'softClip', desc: 'Feedback capacitor' },
-  D1:     { value: '1N4148', type: 'diode', stage: 'softClip', desc: 'Diode pair in the feedback loop' },
-  // Stage 3: hard clipping (gain stage + diodes to ground)
-  C1:     { value: 100,  unit: 'nF', stage: 'hardClip', desc: 'Coupling capacitor into the second op-amp' },
-  R1:     { value: 10,   unit: 'kΩ', stage: 'hardClip', desc: 'Input resistor of the second op-amp' },
-  Rf:     { value: 100,  unit: 'kΩ', stage: 'hardClip', desc: 'Feedback resistor' },
+  // Stage 2: soft clipping (op-amp 1 with Rdrive ‖ Cf1 feedback, Rg + Cg to ground)
+  Cf1:    { value: 100,  unit: 'pF', stage: 'softClip', desc: 'Feedback capacitor' },
+  Rdrive: { min: 1, max: 150, unit: 'kΩ', stage: 'softClip', desc: 'Drive pot in the feedback loop', knob: 'drive' },
+  Rg:     { value: 1,    unit: 'kΩ', stage: 'softClip', desc: 'Gain-setting resistor to ground' },
+  Cg:     { value: 220,  unit: 'nF', stage: 'softClip', desc: 'Capacitor in series with Rg' },
+  // Stage 3: hard clipping (op-amp 2 inverting stage, then diodes to ground)
+  Ci:     { value: 100,  unit: 'nF', stage: 'hardClip', desc: 'Coupling capacitor into op-amp 2' },
+  Ri:     { value: 10,   unit: 'kΩ', stage: 'hardClip', desc: 'Input resistor of op-amp 2' },
   Cf2:    { value: 100,  unit: 'pF', stage: 'hardClip', desc: 'Feedback capacitor' },
-  Cc:     { value: 1,    unit: 'µF', stage: 'hardClip', desc: 'Output coupling capacitor' },
-  Rc:     { value: 1,    unit: 'kΩ', stage: 'hardClip', desc: 'Series resistor before the diodes' },
-  D2:     { value: '1N34A', type: 'diode', stage: 'hardClip', desc: 'Diode pair to ground' },
+  Rf:     { value: 1,    unit: 'MΩ', stage: 'hardClip', desc: 'Feedback resistor' },
+  Cc:     { value: 470,  unit: 'nF', stage: 'hardClip', desc: 'Output coupling capacitor' },
+  Rc:     { value: 47,   unit: 'Ω',  stage: 'hardClip', desc: 'Series resistor before the diodes' },
+  D2:     { value: '1N4148', type: 'diode', stage: 'hardClip', desc: 'Diode pair to ground' },
   // Stage 4: tone
-  Rtone:  { value: 20,   unit: 'kΩ', stage: 'tone', desc: 'Tone resistor' },
-  Ct:     { value: 22,   unit: 'nF', stage: 'tone', desc: 'Tone capacitor to ground' },
+  Rtone:  { min: 5, max: 47, unit: 'kΩ', stage: 'tone', desc: 'Tone pot', knob: 'tone' },
+  Ct:     { value: 10,   unit: 'nF', stage: 'tone', desc: 'Tone capacitor to ground' },
   // Stage 5: level
-  Level:  { value: 100,  unit: 'kΩ', stage: 'level', desc: 'Output volume pot', knob: 'level' },
+  Level:  { min: 0, max: 100, unit: 'kΩ', stage: 'level', desc: 'Output volume pot', knob: 'level' },
 };
 
 export const UNIT_SCALE = { pF: 1e-12, nF: 1e-9, 'µF': 1e-6, 'Ω': 1, 'kΩ': 1e3, 'MΩ': 1e6 };

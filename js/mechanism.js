@@ -32,15 +32,20 @@
 //  ---------------------------------------------------------------------------
 //  WHAT'S IN `state`
 //  ---------------------------------------------------------------------------
-//  state.knobs        { drive, level, bass, mid, treble }   each 0..1
-//  state.components   { Cin: { value: 100, unit: 'nF', si: 1e-7 }, ...,
-//                       D1:  { value: '1N4148', vf: 0.6 }, ... }
-//                     → use .si for math (farads, ohms). Pots (Rdrive, Level)
-//                       give the FULL pot value; multiply by the knob yourself.
+//  state.knobs        { drive, tone, level }   each 0..1
+//  state.components   fixed parts:  Cin: { value: 4.7, unit: 'nF', si: 4.7e-9 }
+//                     pots:         Rdrive: { min: 1, max: 150, unit: 'kΩ',
+//                                             siMin: 1000, siMax: 150000, knob: 'drive' }
+//                     diodes:       D2: { value: '1N4148', vf: 0.6 }
+//                     → use .si / .siMin / .siMax for math (farads, ohms).
+//                       Turning the knob into a resistance (linear, log taper...)
+//                       is up to you: e.g. siMin + knob * (siMax - siMin).
 //  state.sampleRate   e.g. 48000
 //
-//  Part names match the schematic: Cin Rin | Rg Cg Rdrive Cf1 D1 |
-//  C1 R1 Rf Cf2 Cc Rc D2 | Rtone Ct | Level   (defaults live in config.js)
+//  Part names match the schematic:
+//    Cin Rin | Cf1 Rdrive Rg Cg | Ci Ri Cf2 Rf Cc Rc D2 | Rtone Ct | Level
+//  Pots: Rdrive (drive knob), Rtone (tone knob), Level (level knob)
+//  Defaults live in config.js.
 //
 //  ---------------------------------------------------------------------------
 //  WEB AUDIO BUILDING BLOCKS YOU'LL PROBABLY WANT
@@ -85,7 +90,7 @@ function inputShaping(ctx) {
 
 
 // ---------------------------------------------------------------------------
-// STAGE 2 — Soft clipping        parts: Rg, Cg, Rdrive (Drive knob), Cf1, D1
+// STAGE 2 — Soft clipping        parts: Cf1, Rdrive (Drive knob), Rg, Cg
 // ---------------------------------------------------------------------------
 function softClip(ctx) {
   const node = ctx.createGain();          // TODO: replace with your circuit
@@ -94,15 +99,14 @@ function softClip(ctx) {
     input: node,
     output: node,
     update(state) {
-      // TODO: gain from Rdrive * state.knobs.drive and Rg,
-      //       clipping shape from D1.vf, high cut from Cf1 ...
+      // TODO: gain from Rdrive (state.knobs.drive) and Rg, high cut from Cf1 ...
     },
   };
 }
 
 
 // ---------------------------------------------------------------------------
-// STAGE 3 — Hard clipping        parts: C1, R1, Rf, Cf2, Cc, Rc, D2
+// STAGE 3 — Hard clipping        parts: Ci, Ri, Cf2, Rf, Cc, Rc, D2
 // ---------------------------------------------------------------------------
 function hardClip(ctx) {
   const node = ctx.createGain();          // TODO: replace with your circuit
@@ -118,7 +122,7 @@ function hardClip(ctx) {
 
 
 // ---------------------------------------------------------------------------
-// STAGE 4 — Tone                 parts: Rtone, Ct   knobs: bass, mid, treble
+// STAGE 4 — Tone                 parts: Rtone (Tone knob), Ct
 // ---------------------------------------------------------------------------
 function tone(ctx) {
   const node = ctx.createGain();          // TODO: replace with your circuit

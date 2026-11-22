@@ -35,7 +35,7 @@ const part = (id, x, y, anchor = 'middle') =>
   + `<text class="pval" data-v="${id}" x="${x}" y="${y + 14}" text-anchor="${anchor}"></text></g>`;
 
 // ---------- the schematic, split into the five stages ----------
-// Coordinates follow the hand-drawn sketch: IN → Cin/Rin → op-amp 1 → C1/R1 →
+// Coordinates follow the hand-drawn sketch: IN → Cin/Rin → op-amp 1 → Ci/Ri →
 // op-amp 2 → Cc/Rc/diodes → Rtone/Ct → Level → OUT
 const REGIONS = { inputShaping: [8, 186], softClip: [186, 374], hardClip: [374, 852], tone: [852, 962], level: [962, 1102] };
 
@@ -47,16 +47,14 @@ const DRAW = {
 
   softClip:
     wire([186, 90], [260, 90]) + opamp(260, 110, 'U1') + wire([330, 110], [374, 110]) + dot(350, 110)
-    // feedback loop: Rdrive ‖ Cf1 ‖ diode pair
-    + wire([240, 130], [260, 130]) + wire([240, 130], [240, 268]) + wire([350, 110], [350, 268])
-    + wire([240, 185], [270, 185]) + resH(270, 320, 185) + wire([320, 185], [350, 185])
-    + wire([240, 215], [291, 215]) + capH(295, 215) + wire([299, 215], [350, 215])
-    + wire([240, 245], [288, 245]) + diodeH(295, 245, true) + wire([301, 245], [350, 245])
-    + wire([240, 268], [288, 268]) + diodeH(295, 268, false) + wire([301, 268], [350, 268])
-    + dot(240, 130) + dot(240, 160) + dot(240, 185) + dot(240, 215) + dot(240, 245) + dot(350, 185) + dot(350, 215) + dot(350, 245)
+    // feedback loop: Cf1 ‖ Rdrive
+    + wire([240, 130], [260, 130]) + wire([240, 130], [240, 215]) + wire([350, 110], [350, 215])
+    + wire([240, 185], [291, 185]) + capH(295, 185) + wire([299, 185], [350, 185])
+    + wire([240, 215], [270, 215]) + resH(270, 320, 215) + wire([320, 215], [350, 215])
+    + dot(240, 130) + dot(240, 160) + dot(240, 185) + dot(350, 185)
     // gain leg to ground: Rg + Cg
     + wire([240, 160], [205, 160], [205, 172]) + resV(205, 172, 212) + wire([205, 212], [205, 226]) + capV(205, 230) + wire([205, 234], [205, 248]) + gnd(205, 248)
-    + part('Rdrive', 356, 168, 'start') + part('Cf1', 356, 211, 'start') + part('D1', 356, 254, 'start')
+    + part('Cf1', 356, 180, 'start') + part('Rdrive', 356, 216, 'start')
     + part('Rg', 198, 188, 'end') + part('Cg', 198, 226, 'end'),
 
   hardClip:
@@ -68,7 +66,7 @@ const DRAW = {
     + capH(690, 120) + wire([694, 120], [715, 120]) + resH(715, 765, 120) + wire([765, 120], [852, 120])
     + dot(795, 120) + wire([795, 120], [795, 151]) + diodeV(795, 158, true) + wire([795, 165], [795, 196]) + gnd(795, 196)
     + dot(825, 120) + wire([825, 120], [825, 151]) + diodeV(825, 158, false) + wire([825, 165], [825, 196]) + gnd(825, 196)
-    + part('C1', 395, 114) + part('R1', 455, 120) + part('Rf', 585, 186) + part('Cf2', 585, 262)
+    + part('Ci', 395, 114) + part('Ri', 455, 120) + part('Rf', 585, 186) + part('Cf2', 585, 262)
     + part('Cc', 690, 94) + part('Rc', 740, 100) + part('D2', 810, 228),
 
   tone:
@@ -86,8 +84,8 @@ const DRAW = {
 export function formatValue(id, state) {
   const c = COMPONENTS[id], v = state.parts[id];
   if (c.type === 'diode') return v;
-  const s = `${v} ${c.unit}`;
-  return c.knob ? `${s} pot · ${Math.round(state.knobs[c.knob] * 100)}%` : s;
+  if (c.knob) return `${v.min}–${v.max} ${c.unit} pot · ${Math.round(state.knobs[c.knob] * 100)}%`;
+  return `${v} ${c.unit}`;
 }
 
 // ---------- mount ----------
@@ -118,22 +116,36 @@ export function mountXray({ svgHost, togglesHost, readoutHost, popover, state, o
   function open(id, anchorEl) {
     current = id;
     const c = COMPONENTS[id];
+    const v = state.parts[id];
     const field = c.type === 'diode'
-      ? `<select id="pv">${Object.entries(DIODES).map(([k, d]) => `<option value="${k}"${k === state.parts[id] ? ' selected' : ''}>${d.label}</option>`).join('')}</select>`
-      : `<span class="pv-row"><input id="pv" type="number" step="any" min="0" value="${state.parts[id]}"><span>${c.unit}</span></span>`;
+      ? `<select id="pv">${Object.entries(DIODES).map(([k, d]) => `<option value="${k}"${k === v ? ' selected' : ''}>${d.label}</option>`).join('')}</select>`
+      : c.knob
+        ? `<span class="pv-row"><label for="pvMin">min</label><input id="pvMin" type="number" step="any" min="0" value="${v.min}"><label for="pvMax">max</label><input id="pvMax" type="number" step="any" min="0" value="${v.max}"><span>${c.unit}</span></span>`
+        : `<span class="pv-row"><input id="pv" type="number" step="any" min="0" value="${v}"><span>${c.unit}</span></span>`;
     popover.innerHTML = `<b>${id}</b><p>${c.desc}${c.knob ? `. Turned by the <u>${c.knob}</u> knob.` : '.'}</p>${field}<button class="close" aria-label="Close">×</button>`;
     popover.hidden = false;
     const host = popover.offsetParent.getBoundingClientRect(), a = anchorEl.getBoundingClientRect();
     const left = Math.min(Math.max(8, a.left - host.left - 20), host.width - popover.offsetWidth - 8);
     popover.style.left = left + 'px';
     popover.style.top = (a.bottom - host.top + 8) + 'px';
-    const input = popover.querySelector('#pv');
-    input.focus();
-    input.addEventListener(c.type === 'diode' ? 'change' : 'input', () => {
-      if (c.type === 'diode') state.parts[id] = input.value;
-      else { const v = parseFloat(input.value); if (!(v > 0)) return; state.parts[id] = v; }
-      onChange();
-    });
+    if (c.knob) {
+      const lo = popover.querySelector('#pvMin'), hi = popover.querySelector('#pvMax');
+      lo.focus();
+      const commit = () => {
+        const a = parseFloat(lo.value), b = parseFloat(hi.value);
+        if (!(a >= 0) || !(b > a)) return;        // need 0 ≤ min < max
+        state.parts[id] = { min: a, max: b }; onChange();
+      };
+      lo.addEventListener('input', commit); hi.addEventListener('input', commit);
+    } else {
+      const input = popover.querySelector('#pv');
+      input.focus();
+      input.addEventListener(c.type === 'diode' ? 'change' : 'input', () => {
+        if (c.type === 'diode') state.parts[id] = input.value;
+        else { const n = parseFloat(input.value); if (!(n > 0)) return; state.parts[id] = n; }
+        onChange();
+      });
+    }
     popover.querySelector('.close').addEventListener('click', close);
   }
   function close() { popover.hidden = true; if (current) svgHost.querySelector(`[data-c="${current}"]`)?.focus(); current = null; }
