@@ -143,7 +143,8 @@ function tone(ctx) {
     output: lp,
     update(state) {
       const { Rtone, Ct } = state.components;
-      const R = potOhms(Rtone, 1 - state.knobs.tone);
+      const t = Math.sqrt(Math.min(Math.max(state.knobs.tone, 0), 1));
+      const R = Rtone.siMax * Math.pow(Rtone.siMin / Rtone.siMax, t);
       const fc = 1 / (2 * Math.PI * R * Ct.si);
       lp.frequency.value = Math.min(Math.max(fc, 1), state.sampleRate * 0.45);
     },
