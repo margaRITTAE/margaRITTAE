@@ -128,18 +128,24 @@ function hardClip(ctx) {
   };
 }
 
-
+ 
 // ---------------------------------------------------------------------------
 // STAGE 4 — Tone                 parts: Rtone (Tone knob), Ct
+// Series Rtone + shunt Ct is a lowpass filter; fc = 1 / (2π Rtone Ct)
 // ---------------------------------------------------------------------------
 function tone(ctx) {
-  const node = ctx.createGain();          // TODO: lowpass from Rtone, Ct
+  const lp = ctx.createBiquadFilter();
+  lp.type = 'lowpass';
+  lp.Q.value = 0.707;
 
   return {
-    input: node,
-    output: node,
+    input: lp,
+    output: lp,
     update(state) {
-      // TODO
+      const { Rtone, Ct } = state.components;
+      const R = potOhms(Rtone, 1 - state.knobs.tone);
+      const fc = 1 / (2 * Math.PI * R * Ct.si);
+      lp.frequency.value = Math.min(Math.max(fc, 1), state.sampleRate * 0.45);
     },
   };
 }
@@ -149,13 +155,13 @@ function tone(ctx) {
 // STAGE 5 — Level                parts: Level (Level knob)
 // ---------------------------------------------------------------------------
 function level(ctx) {
-  const node = ctx.createGain();          // TODO: gain = knobs.level
+  const gain = ctx.createGain();
 
   return {
-    input: node,
-    output: node,
+    input: gain,
+    output: gain,
     update(state) {
-      // TODO
+      gain.gain.value = state.knobs.level;
     },
   };
 }
@@ -175,8 +181,11 @@ export function describeStage(stageId, state) {
     }
     case 'hardClip':
       return `More gain, then diodes cut off the top and bottom of the signal`;
-    case 'tone':     return '';
-    case 'level':    return '';
+    case 'tone': {
+      return 'Adjustable lowpass filter to tame high frequencies';
+    }
+    case 'level':
+      return `Final level control`;
     default:         return '';
   }
 }
