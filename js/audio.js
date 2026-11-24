@@ -97,9 +97,12 @@ export function applyState(state) {
 
 // ---------- clips ----------
 export async function loadClip(clip) {
-  if (decoded.has(clip.file)) return decoded.get(clip.file);
+  const key = clip.file || clip.name;
+  if (decoded.has(key)) return decoded.get(key);
   let buf, placeholder = false;
-  try {
+  if (clip.note) {
+    buf = sustainedNote(clip.note.freq, clip.note.seconds);
+  } else try {
     const res = await fetch(clip.file);
     if (!res.ok) throw new Error(res.status);
     buf = await ctx.decodeAudioData(await res.arrayBuffer());
@@ -109,7 +112,7 @@ export async function loadClip(clip) {
   }
   fadeEdges(buf, LOOP_FADE);
   const entry = { buf, placeholder };
-  decoded.set(clip.file, entry);
+  decoded.set(key, entry);
   return entry;
 }
 
@@ -154,7 +157,8 @@ export function stopLoop() {
 // it was plucked (~1/5 along), plus a little noise for realism. A pure noise
 // burst sounds brighter but draws as a jagged mess on the oscilloscope.
 const PLUCK_POS = 0.2, PLUCK_NOISE = 0.08;
-function ks(out, start, freq, seconds, amp) {
+// `loss` sets how fast the string dies away (closer to 1 = rings longer).
+function ks(out, start, freq, seconds, amp, loss = 0.996) {
   const sr = ctx.sampleRate, N = Math.max(2, Math.round(sr / freq)), b = new Float32Array(N);
   const peak = Math.max(1, Math.round(N * PLUCK_POS));
   let p = 0, mean = 0;
@@ -167,7 +171,7 @@ function ks(out, start, freq, seconds, amp) {
   for (let i = 0; i < N; i++) b[i] -= mean;               // no DC offset
   const len = Math.min(out.length - start, Math.round(seconds * sr));
   for (let i = 0, k = 0; i < len; i++) {
-    const v = b[k]; b[k] = 0.996 * 0.5 * (v + b[(k + 1) % N]);
+    const v = b[k]; b[k] = loss * 0.5 * (v + b[(k + 1) % N]);
     out[start + i] += v * amp; k = (k + 1) % N;
   }
 }
@@ -181,6 +185,15 @@ export function pluck(freq) {
   ks(d, 0, freq, 2, 1); level(d);
   fadeEdges(buf, 0.003);                     // no click at the very start or end of a pluck
   const s = ctx.createBufferSource(); s.buffer = buf; s.connect(inputBus); s.start();
+}
+
+// One plucked note that keeps ringing (loses only ~5% per second), for the
+// "Single note" clip. Easier to read on the scopes than chords or a solo.
+function sustainedNote(freq, seconds) {
+  const sr = ctx.sampleRate, buf = ctx.createBuffer(1, Math.round(sr * seconds), sr);
+  const d = buf.getChannelData(0);
+  ks(d, 0, freq, seconds, 1, 0.9995); level(d);
+  return buf;
 }
 
 function placeholderStrum(name) {

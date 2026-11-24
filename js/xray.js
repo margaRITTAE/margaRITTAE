@@ -103,13 +103,47 @@ export function mountXray({ svgHost, togglesHost, readoutHost, popover, state, o
     return `<g class="stage" data-stage="${s.id}">`
       + `<rect class="region" x="${x1}" y="4" width="${x2 - x1}" height="300" rx="10"/>`
       + `<text class="stage-name" x="${(x1 + x2) / 2}" y="22" text-anchor="middle">${s.name}</text>`
-      + `<text class="readout" data-r="${s.id}" x="${(x1 + x2) / 2}" y="300" text-anchor="middle"></text>`
       + `<g class="ink" filter="url(#wobble)">${DRAW[s.id]}</g></g>`;
   }).join('');
   svgHost.innerHTML =
     `<svg viewBox="0 0 1110 310" role="img" aria-label="Schematic of the pedal. Click a part to change its value.">
       <defs><filter id="wobble"><feTurbulence type="fractalNoise" baseFrequency="0.03" numOctaves="2" seed="4"/>
-      <feDisplacementMap in="SourceGraphic" scale="2.4"/></filter></defs>${regions}</svg>`;
+      <feDisplacementMap in="SourceGraphic" scale="2.4"/></filter></defs><g id="xr-root">${regions}</g></svg>`;
+
+  // ---------- magnifier: a round lens follows the mouse, zooms in on the parts
+  // under it, and pops up that section's name + description ----------
+  const ZOOM = 2.2, LENS = 170;                  // magnification, lens size in px
+  const svg = svgHost.querySelector('svg');
+  const lens = document.createElement('div');
+  lens.className = 'lens'; lens.hidden = true; lens.setAttribute('aria-hidden', 'true');
+  lens.innerHTML = `<div class="lens-glass xray-film"><svg viewBox="0 0 10 10"></svg></div>`
+    + `<div class="lens-tip"><b></b><span></span></div>`;
+  // The lens shows a copy of the schematic (re-copied in refresh() so values stay current).
+  const copyIntoLens = () => {
+    const copy = svg.querySelector('#xr-root').cloneNode(true);
+    copy.removeAttribute('id');
+    copy.querySelectorAll('[tabindex]').forEach(el => el.removeAttribute('tabindex'));
+    lensSvg.replaceChildren(copy);
+  };
+  document.body.appendChild(lens);
+  const lensSvg = lens.querySelector('svg'), tipName = lens.querySelector('.lens-tip b'), tipText = lens.querySelector('.lens-tip span');
+  let desc = {};                                // filled in by refresh()
+  const stageAt = x => STAGES.find(s => x >= REGIONS[s.id][0] && x < REGIONS[s.id][1]);
+  svg.addEventListener('pointermove', e => {
+    if (e.pointerType !== 'mouse' || !popover.hidden) { lens.hidden = true; return; }
+    const pt = new DOMPoint(e.clientX, e.clientY).matrixTransform(svg.getScreenCTM().inverse());
+    const unitsPerPx = 1110 / svg.getBoundingClientRect().width;
+    const size = LENS * unitsPerPx / ZOOM;
+    lensSvg.setAttribute('viewBox', `${pt.x - size / 2} ${pt.y - size / 2} ${size} ${size}`);
+    const s = stageAt(pt.x);
+    tipName.textContent = s ? s.name : '';
+    tipText.textContent = s ? (desc[s.id] || '') : '';
+    lens.querySelector('.lens-tip').hidden = !s;
+    lens.style.left = (e.clientX - LENS / 2) + 'px';
+    lens.style.top = (e.clientY - LENS / 2) + 'px';
+    lens.hidden = false;
+  });
+  svg.addEventListener('pointerleave', () => { lens.hidden = true; });
 
   // click a part → popover editor
   let current = null;
@@ -124,6 +158,7 @@ export function mountXray({ svgHost, togglesHost, readoutHost, popover, state, o
         : `<span class="pv-row"><input id="pv" type="number" step="any" min="0" value="${v}"><span>${c.unit}</span></span>`;
     popover.innerHTML = `<b>${id}</b><p>${c.desc}${c.knob ? `. Turned by the <u>${c.knob}</u> knob.` : '.'}</p>${field}<button class="close" aria-label="Close">×</button>`;
     popover.hidden = false;
+    lens.hidden = true;
     const host = popover.offsetParent.getBoundingClientRect(), a = anchorEl.getBoundingClientRect();
     const left = Math.min(Math.max(8, a.left - host.left - 20), host.width - popover.offsetWidth - 8);
     popover.style.left = left + 'px';
@@ -157,15 +192,14 @@ export function mountXray({ svgHost, togglesHost, readoutHost, popover, state, o
   popover.addEventListener('keydown', e => { if (e.key === 'Escape' || e.key === 'Enter') close(); });
   document.addEventListener('click', () => { if (!popover.hidden) close(); });
 
-  // refresh labels, toggles, readouts
+  // refresh labels, toggles, and the descriptions shown in the magnifier
   return function refresh(fullState) {
     togglesHost.querySelectorAll('.toggle').forEach((b, i) => b.setAttribute('aria-pressed', String(state.stageOn[i])));
     STAGES.forEach((s, i) => {
       svgHost.querySelector(`[data-stage="${s.id}"]`).classList.toggle('off', !state.stageOn[i] || !state.pedalOn);
-      let r = '';
-      try { r = describe(s.id, fullState) || ''; } catch (e) { console.error(e); }
-      svgHost.querySelector(`[data-r="${s.id}"]`).textContent = r;
+      try { desc[s.id] = describe(s.id, fullState) || ''; } catch (e) { console.error(e); desc[s.id] = ''; }
     });
     svgHost.querySelectorAll('[data-v]').forEach(t => { t.textContent = formatValue(t.dataset.v, state); });
+    copyIntoLens();
   };
 }

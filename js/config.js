@@ -1,13 +1,14 @@
 // config.js
 // Everything you might want to rename or retune without touching the UI code.
 
-// Clean guitar recordings for the Input column.
-// Drop the .wav files into /audio. If a file is missing, the app plays a
-// synthesized placeholder strum so the page still works.
+// Clean guitar sounds for the Input column.
+// Recordings: drop the .wav files into /audio. If a file is missing, the app
+// plays a synthesized placeholder strum so the page still works.
+// `note`: no file, the app synthesizes one plucked note that rings out (sustained).
 export const CLIPS = [
-  { name: 'Emaj.wav',       file: 'audio/Emaj.wav' },
-  { name: 'solo.wav',       file: 'audio/solo.wav' },
-  { name: 'wonderwall.wav', file: 'audio/wonderwall.wav' },
+  { name: 'Emaj.wav',    file: 'audio/Emaj.wav' },
+  { name: 'solo.wav',    file: 'audio/solo.wav' },
+  { name: 'Single note', note: { freq: 110, seconds: 4 } },   // A2 (5th fret, low E string), re-plucked every 4 s
 ];
 
 // Knobs on the outside of the pedal. Values are 0..1.

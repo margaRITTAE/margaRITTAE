@@ -1,20 +1,18 @@
-/* Hand-drawn notebook look: ink on paper, wobbly borders, handwriting.
+/* Hand-drawn notebook look: light ink on navy paper, wobbly borders, handwriting.
+   One theme only (navy), whatever the visitor's light/dark setting.
    Layout: three columns like the sketch — Input | Mechanism | Output — on one screen. */
 :root{
-  --paper:#FDFDF9; --ink:#1D1D1F; --muted:#6B6E76; --grid:#E6EAF2;
-  --accent:#2457C5;   /* blue pen */
-  --red:#D23A2A;      /* red pen: the "after" signal */
-  --hi:#FFE36B;       /* highlighter */
-  --xray-bg:#17202E; --xray-ink:#D6E6FF; --xray-dim:#5B6E8C;
+  --paper:#14203A; --ink:#E9EDF6; --muted:#A3AEC6; --grid:#1F2D4D;
+  --accent:#86A8FF;   /* blue pen */
+  --red:#FF7A5C;      /* red pen: the "after" signal */
+  --hi:#8A7516;       /* highlighter */
+  --xray-bg:#0A1120; --xray-ink:#D6E6FF; --xray-dim:#5B6E8C;
   --f-hand:'Patrick Hand','Comic Sans MS','Segoe Print',cursive;
   --f-title:'Caveat','Segoe Print',cursive;
   --wobble:255px 15px 225px 15px / 15px 225px 15px 255px;
   --wobble2:15px 225px 15px 255px / 255px 15px 225px 15px;
+  color-scheme:dark;
 }
-@media (prefers-color-scheme: dark){
-  :root:not([data-theme="light"]){ --paper:#14203A; --ink:#E9EDF6; --muted:#A3AEC6; --grid:#1F2D4D; --xray-bg:#0A1120; --accent:#86A8FF; --red:#FF7A5C; --hi:#8A7516; color-scheme:dark; }
-}
-:root[data-theme="dark"]{ --paper:#14203A; --ink:#E9EDF6; --muted:#A3AEC6; --grid:#1F2D4D; --xray-bg:#0A1120; --accent:#86A8FF; --red:#FF7A5C; --hi:#8A7516; color-scheme:dark; }
 
 *{box-sizing:border-box}
 [hidden]{display:none!important}
@@ -101,7 +99,14 @@ button:focus-visible,.knob:focus-visible,.part:focus-visible,input:focus-visible
 .xray-film .tiny{font-size:12px}
 .xray-film .sym{font-size:14px}
 .xray-film .lbl{font-size:15px}
-.xray-film .readout{font-size:14px;fill:#FFE36B}
+/* magnifier: a round lens that follows the mouse over the schematic */
+.lens{position:fixed;z-index:20;width:170px;pointer-events:none}
+.lens-glass{width:170px;height:170px;padding:0;min-width:0;border-radius:50%;overflow:hidden;border:3px solid var(--xray-ink);box-shadow:0 0 0 2.5px var(--ink),4px 5px 0 2.5px var(--ink)}
+.lens-glass svg{display:block;width:100%;height:100%}
+.lens-tip{margin:10px auto 0;width:220px;margin-left:-25px;padding:8px 10px;background:var(--paper);color:var(--ink);border:2.5px solid var(--ink);border-radius:var(--wobble);box-shadow:4px 5px 0 var(--ink);display:flex;flex-direction:column;gap:2px;text-align:center}
+.lens-tip b{font-family:var(--f-title);font-size:24px;line-height:1}
+.lens-tip span{font-size:15px;color:var(--muted);line-height:1.25}
+@media (prefers-reduced-motion:reduce){.lens{transition:none}}
 .xray-film .part{cursor:pointer}
 .xray-film .pname{font-size:15px;fill:#FFFFFF}
 .xray-film .pval{font-size:12px;fill:#9FC0F2}
