@@ -31,13 +31,13 @@ The pedal has five stages, modeled on a real two-op-amp distortion circuit:
 ```
                                                          GND
                                                           │
-Signal ── Cin ──┬─────── + ┌──────┐                    └─ + ┌──────┐
-                │          │OP Amp├─┐                       │OP Amp├─┬── Cc ── Rc ─┬─┬── Rtone ─┬── Level ── Out
-               Rin       - └──────┘ ├── Ci ── Ri ─────── - └──────┘ │             ▼ ▲          │
-                │        │          │                     │          │             └┬┘          Ct
-               GND       ├── Cf1 ───┤                     ├── Cf2 ───┤              │           │
-                         │          │                     │          │             GND         GND
-               Cg ── Rg ─┴─ Rdrive ─┘                     └─── Rf ───┘
+    Signal ─── Cin───┬──────── + ┌──────┐                 └─ + ┌──────┐                                 ┌─────┐
+                     │           │OP Amp├─┐                    │OP Amp├─┬── Cc ── Rc ─┬─┬─── Rtone ─┬───│Level├─── Out
+                    Rin        - └──────┘ ├── Ci ── Ri ───── - └──────┘ │             ▼ _           │   └─────┘
+                     │         │          │                  │          │             ─ ▲          Ct
+                    GND        ├─── Cf1───┤                  ├─── Cf2───┤             └┬┘           │
+                     │         │          │                  │          │              │            │
+                    Cg ── Rg ──┴─ Rdrive ─┘                  └─── Rf ───┘             GND          GND
 ```
 
 Numbers below use the default part values from `js/config.js`.
