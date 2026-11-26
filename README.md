@@ -1,12 +1,12 @@
 # Distortion Pedal, Opened Up
 
-**Live site:** https://margarittae.github.io/margaRITTAE/ (use headphones)
+**Live site:** https://margarittae.github.io/margaRITTAE/ (USE HEADPHONES)
 
 Almost every rock record uses a distortion pedal, but few players know what happens inside the box. This site lets you play a clean guitar through a simulated pedal, open it up, and watch the signal change at each step.
 
 ## Why we made this
 
-Distortion pedals are everyday gear. You step on one and the guitar gets fuzzy. What's actually happening is less known: a small circuit of op-amps, capacitors and diodes cuts the top and bottom off the guitar's waveform, and that clipping is what we hear as "distortion."
+Distortion pedals are everyday gear for guitarists. You step on one and the guitar gets RrrrAgH. What's actually happening is less known: a small circuit of op-amps, capacitors and diodes cuts the top and bottom off the guitar's waveform, and that clipping is what we hear as **DiSTorTiON**!!!
 
 Our goal was to make that hidden mechanism visible and hands-on:
 
@@ -50,7 +50,7 @@ Numbers below use the default part values from `js/config.js`.
 | 4 | **Tone** (Rtone, Ct) | A resistor and a capacitor to ground make a lowpass filter. It tames the harsh high harmonics that clipping creates: from about **3.2 kHz** (bright) to **340 Hz** (dark). | Web Audio lowpass filter at f = 1 / (2π·Rtone·Ct), with a logarithmic knob taper |
 | 5 | **Level** | Sets the output volume. | Web Audio gain |
 
-**Why clipping sounds like distortion:** a clean note is a smooth, mostly rounded wave. Flattening its peaks adds new frequencies, called harmonics, at multiples of the note's pitch. The harder the clip (more Drive), the more harmonics, and the "fuzzier" it sounds. Switch off the hard-clipping stage in the X-ray view to hear and see the difference.
+**Why clipping sounds like distortion:** a clean note is a smooth, mostly rounded wave. Flattening its peaks adds new frequencies, called harmonics, at multiples of the note's pitch. The harder the clip (more Drive), the more harmonics, and the RrrrAgH-er it sounds. Switch off the hard-clipping stage in the X-ray view to hear and see the difference.
 
 ## Project structure
 
